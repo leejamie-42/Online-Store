@@ -1,0 +1,40 @@
+# SHARED PROPERTIES FOR THE 'DEV' PROFILE in YAML format
+server:
+  port: 8082
+
+spring:
+  config:
+    import: optional:file:.env[.properties]
+  # --- Database Configuration ---
+  datasource:
+    url: jdbc:postgresql://localhost:5433/${PG_DB_NAME:warehouse} # Using port 5433 as discussed
+    username: ${PG_USERNAME:postgres}
+    password: ${PG_PASSWORD} # Placeholder for the secret from .env
+
+  # --- JPA / Hibernate Settings ---
+  jpa:
+    show-sql: true
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        format_sql: true
+        jdbc:
+          lob:
+            non_contextual_creation: true
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+
+# --- Logging Configuration ---
+logging:
+  level:
+    root: INFO
+    com.comp5348.store: DEBUG
+    org.hibernate.SQL: DEBUG
+    org.hibernate.type.descriptor.sql.BasicBinder: TRACE
+
+# --- Actuator Settings ---
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,loggers,env

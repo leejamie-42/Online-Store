@@ -1,0 +1,81 @@
+syntax = "proto3";
+
+option java_multiple_files = true;
+option java_package = "com.comp5348.store.grpc.warehouse";
+option java_outer_classname = "WarehouseProto";
+
+package warehouse;
+
+/**
+ * Warehouse Service for inventory management.
+ *
+ * Provides atomic operations for stock validation, reservation, commit, and rollback.
+ */
+service WarehouseService {
+  // Check if sufficient stock is available
+  rpc CheckStock(CheckStockRequest) returns (CheckStockResponse);
+
+  // Reserve stock for an order (atomic operation)
+  rpc ReserveStock(ReserveStockRequest) returns (ReserveStockResponse);
+
+  // Commit reserved stock (mark as sold)
+  rpc CommitStock(CommitStockRequest) returns (CommitStockResponse);
+
+  // Rollback reserved stock (compensation transaction)
+  rpc RollbackStock(RollbackStockRequest) returns (RollbackStockResponse);
+}
+
+// Check Stock Messages
+
+message CheckStockRequest {
+  int64 product_id = 1;
+  int32 quantity = 2;
+}
+
+message CheckStockResponse {
+  bool available = 1;
+  int32 total_available = 2;         // Total available quantity across all warehouses
+}
+
+// Reserve Stock Messages
+
+message ReserveStockRequest {
+  int64 product_id = 1;
+  int32 quantity = 2;
+  int64 order_id = 3;
+}
+
+message ReserveStockResponse {
+  bool success = 1;
+  repeated string reserved_from_warehouses = 2;  // Warehouse IDs where stock was reserved
+  string message = 3;                  // Error message if failed
+}
+
+// Commit Stock Messages
+
+message CommitStockRequest {
+  int64 order_id = 1;
+}
+
+message DeliveryPackage {
+    string warehouseAddress = 1;
+    string productId = 2;
+    int32 quantity = 3;
+}
+
+message CommitStockResponse {
+  bool success = 1;
+  repeated DeliveryPackage deliveryPackages = 2;
+  string message = 3;
+}
+
+// Rollback Stock Messages
+
+message RollbackStockRequest {
+  int64 order_id = 1;
+}
+
+message RollbackStockResponse {
+  bool rolled_back = 1;
+  string message = 2;
+}

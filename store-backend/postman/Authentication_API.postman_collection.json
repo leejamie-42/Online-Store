@@ -1,0 +1,605 @@
+{
+  "info": {
+    "_postman_id": "auth-api-collection-001",
+    "name": "Store Backend - Authentication API",
+    "description": "Complete authentication endpoints for user registration, login, and token refresh",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Register New User",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "// Save tokens to environment variables",
+              "if (pm.response.code === 201) {",
+              "    var jsonData = pm.response.json();",
+              "    pm.environment.set(\"accessToken\", jsonData.accessToken);",
+              "    pm.environment.set(\"refreshToken\", jsonData.refreshToken);",
+              "    pm.environment.set(\"userId\", jsonData.user.id);",
+              "    pm.environment.set(\"userEmail\", jsonData.user.email);",
+              "    ",
+              "    // Verify response structure",
+              "    pm.test(\"Status code is 201 Created\", function () {",
+              "        pm.response.to.have.status(201);",
+              "    });",
+              "    ",
+              "    pm.test(\"Response has access token\", function () {",
+              "        pm.expect(jsonData.accessToken).to.be.a('string');",
+              "    });",
+              "    ",
+              "    pm.test(\"Response has refresh token\", function () {",
+              "        pm.expect(jsonData.refreshToken).to.be.a('string');",
+              "    });",
+              "    ",
+              "    pm.test(\"User email matches request\", function () {",
+              "        pm.expect(jsonData.user.email).to.eql(pm.environment.get(\"testEmail\"));",
+              "    });",
+              "}"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"name\": \"{{testUserName}}\",\n    \"email\": \"{{testEmail}}\",\n    \"password\": \"{{testPassword}}\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/auth/register",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "auth", "register"]
+        },
+        "description": "Register a new user account with name, email, and password.\n\n**Request Body:**\n- `name` (string, required): User's full name (2-100 characters)\n- `email` (string, required): Valid email address\n- `password` (string, required): Password (minimum 8 characters)\n\n**Response:**\n- `accessToken`: JWT access token (valid for 15 minutes)\n- `refreshToken`: JWT refresh token (valid for 24 hours)\n- `user`: User details (id, name, email, role)"
+      },
+      "response": [
+        {
+          "name": "Success - User Registered",
+          "originalRequest": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"name\": \"John Doe\",\n    \"email\": \"john.doe@example.com\",\n    \"password\": \"SecurePass123!\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/register",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "register"]
+            }
+          },
+          "status": "Created",
+          "code": 201,
+          "_postman_previewlanguage": "json",
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            }
+          ],
+          "body": "{\n    \"accessToken\": \"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...\",\n    \"refreshToken\": \"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...\",\n    \"user\": {\n        \"id\": 1,\n        \"name\": \"John Doe\",\n        \"email\": \"john.doe@example.com\",\n        \"role\": \"CUSTOMER\"\n    }\n}"
+        },
+        {
+          "name": "Error - User Already Exists",
+          "originalRequest": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"name\": \"John Doe\",\n    \"email\": \"existing@example.com\",\n    \"password\": \"SecurePass123!\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/register",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "register"]
+            }
+          },
+          "status": "Conflict",
+          "code": 409,
+          "_postman_previewlanguage": "json",
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            }
+          ],
+          "body": "{\n    \"error\": \"Conflict\",\n    \"message\": \"User already exists with email: existing@example.com\"\n}"
+        },
+        {
+          "name": "Error - Validation Failed",
+          "originalRequest": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"name\": \"\",\n    \"email\": \"invalid-email\",\n    \"password\": \"short\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/register",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "register"]
+            }
+          },
+          "status": "Bad Request",
+          "code": 400,
+          "_postman_previewlanguage": "json",
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            }
+          ],
+          "body": "{\n    \"error\": \"Bad Request\",\n    \"fieldErrors\": {\n        \"name\": \"Name is required\",\n        \"email\": \"Email must be valid\",\n        \"password\": \"Password must be at least 8 characters\"\n    }\n}"
+        }
+      ]
+    },
+    {
+      "name": "Login",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "// Save tokens to environment variables",
+              "if (pm.response.code === 200) {",
+              "    var jsonData = pm.response.json();",
+              "    pm.environment.set(\"accessToken\", jsonData.accessToken);",
+              "    pm.environment.set(\"refreshToken\", jsonData.refreshToken);",
+              "    pm.environment.set(\"userId\", jsonData.user.id);",
+              "    pm.environment.set(\"userEmail\", jsonData.user.email);",
+              "    ",
+              "    // Verify response structure",
+              "    pm.test(\"Status code is 200 OK\", function () {",
+              "        pm.response.to.have.status(200);",
+              "    });",
+              "    ",
+              "    pm.test(\"Response has access token\", function () {",
+              "        pm.expect(jsonData.accessToken).to.be.a('string');",
+              "    });",
+              "    ",
+              "    pm.test(\"Response has refresh token\", function () {",
+              "        pm.expect(jsonData.refreshToken).to.be.a('string');",
+              "    });",
+              "    ",
+              "    pm.test(\"User object exists\", function () {",
+              "        pm.expect(jsonData.user).to.be.an('object');",
+              "        pm.expect(jsonData.user.email).to.be.a('string');",
+              "    });",
+              "}"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"username\": \"{{testUserName}}\",\n    \"password\": \"{{testPassword}}\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/auth/login",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "auth", "login"]
+        },
+        "description": "Authenticate user with username and password.\n\n**Request Body:**\n- `username` (string, required): User's username (name field)\n- `password` (string, required): User's password\n\n**Response:**\n- `accessToken`: JWT access token for API authentication\n- `refreshToken`: JWT refresh token for obtaining new access tokens\n- `user`: User details (id, name, email, role)"
+      },
+      "response": [
+        {
+          "name": "Success - Login",
+          "originalRequest": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"username\": \"customer\",\n    \"password\": \"COMP5348\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "login"]
+            }
+          },
+          "status": "OK",
+          "code": 200,
+          "_postman_previewlanguage": "json",
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            }
+          ],
+          "body": "{\n    \"accessToken\": \"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...\",\n    \"refreshToken\": \"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...\",\n    \"user\": {\n        \"id\": 1,\n        \"name\": \"Test Customer\",\n        \"email\": \"customer@example.com\",\n        \"role\": \"CUSTOMER\"\n    }\n}"
+        },
+        {
+          "name": "Error - Invalid Credentials",
+          "originalRequest": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"username\": \"customer\",\n    \"password\": \"WrongPassword123\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "login"]
+            }
+          },
+          "status": "Unauthorized",
+          "code": 401,
+          "_postman_previewlanguage": "json",
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            }
+          ],
+          "body": "{\n    \"error\": \"Unauthorized\",\n    \"message\": \"Invalid credentials\"\n}"
+        }
+      ]
+    },
+    {
+      "name": "Refresh Access Token",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "// Save new access token",
+              "if (pm.response.code === 200) {",
+              "    var jsonData = pm.response.json();",
+              "    pm.environment.set(\"accessToken\", jsonData.accessToken);",
+              "    ",
+              "    pm.test(\"Status code is 200 OK\", function () {",
+              "        pm.response.to.have.status(200);",
+              "    });",
+              "    ",
+              "    pm.test(\"Response has new access token\", function () {",
+              "        pm.expect(jsonData.accessToken).to.be.a('string');",
+              "    });",
+              "}"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"refreshToken\": \"{{refreshToken}}\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/auth/refresh",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "auth", "refresh"]
+        },
+        "description": "Obtain a new access token using a valid refresh token.\n\n**Request Body:**\n- `refreshToken` (string, required): Valid JWT refresh token from login/register\n\n**Response:**\n- `accessToken`: New JWT access token\n\n**Note:** Use this endpoint when the access token expires (after 15 minutes) to obtain a new one without requiring the user to log in again."
+      },
+      "response": [
+        {
+          "name": "Success - Token Refreshed",
+          "originalRequest": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"refreshToken\": \"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/refresh",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "refresh"]
+            }
+          },
+          "status": "OK",
+          "code": 200,
+          "_postman_previewlanguage": "json",
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            }
+          ],
+          "body": "{\n    \"accessToken\": \"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.NEW_TOKEN...\"\n}"
+        },
+        {
+          "name": "Error - Invalid Refresh Token",
+          "originalRequest": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"refreshToken\": \"invalid.token.here\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/refresh",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "refresh"]
+            }
+          },
+          "status": "Unauthorized",
+          "code": 401,
+          "_postman_previewlanguage": "json",
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            }
+          ],
+          "body": "{\n    \"error\": \"Unauthorized\",\n    \"message\": \"Invalid credentials\"\n}"
+        }
+      ]
+    },
+    {
+      "name": "Logout",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "// Clear tokens from environment after successful logout",
+              "if (pm.response.code === 200) {",
+              "    pm.environment.unset(\"accessToken\");",
+              "    pm.environment.unset(\"refreshToken\");",
+              "    ",
+              "    pm.test(\"Status code is 200 OK\", function () {",
+              "        pm.response.to.have.status(200);",
+              "    });",
+              "    ",
+              "    pm.test(\"Logout message is correct\", function () {",
+              "        var jsonData = pm.response.json();",
+              "        pm.expect(jsonData.message).to.eql(\"Logged out successfully\");",
+              "    });",
+              "    ",
+              "    pm.test(\"Tokens cleared from environment\", function () {",
+              "        pm.expect(pm.environment.get(\"accessToken\")).to.be.undefined;",
+              "        pm.expect(pm.environment.get(\"refreshToken\")).to.be.undefined;",
+              "    });",
+              "}"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"refreshToken\": \"{{refreshToken}}\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/auth/logout",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "auth", "logout"]
+        },
+        "description": "Logout user by invalidating both access and refresh tokens.\n\n**Authentication:**\n- Bearer token in Authorization header (access token)\n\n**Request Body:**\n- `refreshToken` (string, optional): Refresh token to invalidate\n\n**Response:**\n- `message`: Confirmation message\n\n**Note:** After logout, both tokens are blacklisted and can no longer be used. The tokens are automatically cleared from the environment."
+      },
+      "response": [
+        {
+          "name": "Success - Logged Out",
+          "originalRequest": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"refreshToken\": \"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/logout",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "logout"]
+            }
+          },
+          "status": "OK",
+          "code": 200,
+          "_postman_previewlanguage": "json",
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            }
+          ],
+          "body": "{\n    \"message\": \"Logged out successfully\"\n}"
+        },
+        {
+          "name": "Success - Logout (Access Token Only)",
+          "originalRequest": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/logout",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "logout"]
+            }
+          },
+          "status": "OK",
+          "code": 200,
+          "_postman_previewlanguage": "json",
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            }
+          ],
+          "body": "{\n    \"message\": \"Logged out successfully\"\n}"
+        }
+      ]
+    },
+    {
+      "name": "Test Protected Endpoint (with Auth)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status code is 200 OK\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test(\"Request was authenticated\", function () {",
+              "    // Verify the request was successful with JWT authentication",
+              "    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/products",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "products"]
+        },
+        "description": "Example of a protected endpoint call using JWT authentication.\n\n**Authentication:**\n- Bearer token in Authorization header\n- Use the `accessToken` from login/register response\n\n**Note:** This is an example endpoint. Replace with any protected endpoint you want to test."
+      },
+      "response": []
+    }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{accessToken}}",
+        "type": "string"
+      }
+    ]
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [""]
+      }
+    },
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "exec": [""]
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080",
+      "type": "string"
+    }
+  ]
+}

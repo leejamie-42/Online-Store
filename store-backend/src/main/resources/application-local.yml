@@ -1,0 +1,129 @@
+# SHARED PROPERTIES FOR THE 'DEV' PROFILE in YAML format
+server:
+  port: ${PORT:8081}
+
+spring:
+  config:
+    import: optional:file:.env[.properties]
+  # --- Database Configuration ---
+  datasource:
+    url: jdbc:postgresql://localhost:5433/${PG_DB_NAME:store_db} # Using port 5433 as discussed
+    username: ${PG_USERNAME:postgres}
+    password: ${PG_PASSWORD} # Placeholder for the secret from .env
+
+  # --- JPA / Hibernate Settings ---
+  jpa:
+    show-sql: true
+    hibernate:
+      ddl-auto: validate # Changed from 'update' to 'validate' - schema managed by Flyway
+    properties:
+      hibernate:
+        format_sql: true
+        jdbc:
+          lob:
+            non_contextual_creation: true
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+
+  # --- Flyway Database Migration ---
+  flyway:
+    enabled: true
+    baseline-on-migrate: true # Enable baseline for existing databases
+    baseline-version: 0 # Start baseline at version 0
+    locations: classpath:db/migration # Migration scripts location
+    validate-on-migrate: true # Validate migrations before applying
+    out-of-order: true
+    clean-disabled: true # Disable clean for safety in production
+    placeholders:
+      jsonb_type: JSONB
+
+  # --- Redis Configuration ---
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD}
+      lettuce:
+        pool:
+          max-active: 10
+          max-idle: 5
+          min-idle: 2
+          max-wait: 2000ms
+
+  # --- RabbitMQ Configuration ---
+  rabbitmq:
+    host: ${RABBITMQ_HOST:localhost}
+    port: ${RABBITMQ_PORT:5672}
+    username: ${RABBITMQ_USERNAME:guest}
+    password: ${RABBITMQ_PASSWORD:guest}
+    virtual-host: ${RABBITMQ_VHOST:/}
+    listener:
+      simple:
+        acknowledge-mode: auto
+        retry:
+          enabled: true
+          initial-interval: 3000
+          max-attempts: 3
+          multiplier: 2
+    template:
+      retry:
+        enabled: true
+        initial-interval: 1000
+        max-attempts: 3
+
+  # OpenAPI
+  springdoc:
+    swagger-ui:
+      tryItOutEnabled: true
+      filter: true
+
+  openapi:
+    dev-url: http://localhost:${PORT:8080}
+
+# --- Logging Configuration ---
+logging:
+  level:
+    root: INFO
+    com.comp5348.store: DEBUG
+    org.hibernate.SQL: DEBUG
+    org.hibernate.type.descriptor.sql.BasicBinder: TRACE
+
+# --- Actuator Settings ---
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,loggers,env
+
+# --- JWT Configuration ---
+jwt:
+  secret-key: ${JWT_SECRET:dGhpcy1pcy1hLXNlY3JldC1rZXktZm9yLWp3dC10b2tlbi1nZW5lcmF0aW9uLW1pbmltdW0tMjU2LWJpdHMtbG9uZw==}
+  access-token-expiration: 3600000 # 1 hour in milliseconds
+  refresh-token-expiration: 604800000 # 7 days in milliseconds
+
+# --- Application Configuration ---
+app:
+  data:
+    seed: true # Enable/disable seed data loading on startup
+
+grpc:
+  client:
+    warehouse:
+      address: "static://${WAREHOUSE_GRPC_HOST:localhost}:${WAREHOUSE_GRPC_PORT:9090}"
+      negotiationType: PLAINTEXT # Use PLAINTEXT for local dev; TLS for production
+      enableKeepAlive: true
+      keepAliveTime: 30s
+      keepAliveTimeout: 5s
+      maxInboundMessageSize: 10485760 # 10MB
+      # Deadline for all calls (can be overridden per-method)
+      deadline: ${WAREHOUSE_GRPC_TIMEOUT:5000}ms
+
+# --- Bank Service Configuration ---
+bank:
+  service:
+    base-url: ${BANK_SERVICE_URL:http://localhost:8083} # Bank Service URL
+    account-id: ${BANK_ACCOUNT_ID:1} # Store's bank account ID
+
+# --- DeliveryCo Service Configuration ---
+deliveryco:
+  service:
+    base-url: ${DELIVERYCO_BASE_URL:http://localhost:8084}

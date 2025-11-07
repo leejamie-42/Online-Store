@@ -1,0 +1,268 @@
+import java.text.SimpleDateFormat
+
+buildscript {
+	repositories {
+		mavenCentral()
+	}
+	dependencies {
+		classpath 'org.postgresql:postgresql:42.7.2'
+		classpath 'org.flywaydb:flyway-database-postgresql:11.7.2'
+	}
+}
+
+plugins {
+	id 'java'
+	id 'org.springframework.boot' version '3.5.6'
+	id 'io.spring.dependency-management' version '1.1.7'
+	id 'org.flywaydb.flyway' version '11.7.2'
+	id 'com.google.protobuf' version '0.9.4'
+}
+
+group = 'com.comp5348'
+version = '0.0.1-SNAPSHOT'
+description = 'Store backend Spring boot project'
+
+java {
+	toolchain {
+		languageVersion = JavaLanguageVersion.of(17)
+	}
+}
+
+configurations {
+	compileOnly {
+		extendsFrom annotationProcessor
+	}
+}
+
+repositories {
+	mavenCentral()
+}
+
+dependencies {
+	implementation 'org.springframework.boot:spring-boot-starter-actuator'
+	implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+	implementation 'org.springframework.boot:spring-boot-starter-web'
+
+	// Swagger
+	implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.7.0'
+
+	// Security dependencies
+	implementation 'org.springframework.boot:spring-boot-starter-security'
+	implementation 'org.springframework.boot:spring-boot-starter-validation'
+
+	// JWT dependencies
+	implementation 'io.jsonwebtoken:jjwt-api:0.12.3'
+	runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.12.3'
+	runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.12.3'
+
+	// Redis dependencies
+    implementation 'org.springframework.boot:spring-boot-starter-data-redis'
+	implementation 'org.apache.commons:commons-pool2'
+
+	// RabbitMQ dependencies
+	implementation 'org.springframework.boot:spring-boot-starter-amqp'
+
+	// Flyway database migration
+	implementation 'org.flywaydb:flyway-core'
+	implementation 'org.flywaydb:flyway-database-postgresql'
+
+	// gRPC dependencies with Spring Boot gRPC Client Starter
+	// Using client-only to avoid server dependencies
+	implementation 'net.devh:grpc-client-spring-boot-starter:3.1.0.RELEASE'
+	implementation 'com.google.protobuf:protobuf-java:3.24.0'
+	compileOnly 'org.apache.tomcat:annotations-api:6.0.53' // javax.annotation for @Generated
+
+	compileOnly 'org.projectlombok:lombok'
+	runtimeOnly 'org.postgresql:postgresql'
+	annotationProcessor 'org.projectlombok:lombok'
+
+	// Test dependencies
+	testImplementation 'org.springframework.boot:spring-boot-starter-test'
+	testImplementation 'org.springframework.security:spring-security-test'
+	testImplementation 'com.github.codemonstur:embedded-redis:1.4.3'
+	testRuntimeOnly 'com.h2database:h2'
+	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+tasks.named('test') {
+	useJUnitPlatform()
+}
+
+// Protobuf Configuration
+protobuf {
+	protoc {
+		artifact = 'com.google.protobuf:protoc:3.24.0'
+	}
+	plugins {
+		grpc {
+			artifact = 'io.grpc:protoc-gen-grpc-java:1.59.0'
+		}
+	}
+	generateProtoTasks {
+		all()*.plugins {
+			grpc {}
+		}
+	}
+}
+
+// Add generated sources to source sets
+sourceSets {
+	main {
+		proto {
+			// Reference shared proto files from common directory
+			srcDir '../common/proto'
+		}
+		java {
+			srcDirs 'build/generated/source/proto/main/grpc'
+			srcDirs 'build/generated/source/proto/main/java'
+		}
+	}
+}
+
+
+// Flyway Gradle Plugin Configuration
+// Load .env file for Flyway tasks
+def envFile = file('.env')
+def migrationDir = "src/main/resources/db/migration"
+
+if (envFile.exists()) {
+	envFile.readLines().each { line ->
+		if (line && !line.startsWith('#') && line.contains('=')) {
+			def (key, value) = line.split('=', 2)
+			if (!System.getenv(key)) {
+				System.setProperty(key, value)
+			}
+		}
+	}
+}
+
+flyway {
+	url = "jdbc:postgresql://localhost:5433/${System.getProperty('PG_DB_NAME') ?: System.getenv('PG_DB_NAME') ?: 'store_dev_db'}"
+	user = System.getProperty('PG_USERNAME') ?: System.getenv('PG_USERNAME') ?: 'postgres'
+	password = System.getProperty('PG_PASSWORD') ?: System.getenv('PG_PASSWORD')
+	locations = ['classpath:db/migration']
+	baselineOnMigrate = true
+	baselineVersion = '0'
+	validateOnMigrate = true
+	placeholders = [
+        'jsonb_type': 'JSONB'
+    ]
+}
+
+task generateMigrationFile {
+    group = "flyway"
+    description = "Generate a new Flyway SQL migration file with timestamp-based version"
+
+    doLast {
+        def mgName = project.hasProperty('mgName') ? project.property('mgName') : null
+
+        if (!mgName) {
+            throw new GradleException("❗ You must pass -PmgName=migration_name")
+        }
+
+
+				def timestamp = new SimpleDateFormat("yyyyMMddHHmmss").format(new Date())
+        def filename = "V${timestamp}__${mgName}.sql"
+        def file = file("${migrationDir}/${filename}")
+
+        if (!file.parentFile.exists()) {
+            file.parentFile.mkdirs()
+        }
+
+        file.text = """-- Migration: ${mgName}
+				-- Created at: ${timestamp}
+				-- Write your SQL below"""
+
+        println "✅ Created migration file: ${file.path}"
+    }
+}
+
+// ============================================================================
+// Custom Task: Clear and Reload Seed Data
+// ============================================================================
+// Usage: ./gradlew :store-backend:reloadSeedData
+// Description: Clears existing products and reloads fresh seed data
+// Warning: This will DELETE all products in the store-backend database!
+// ============================================================================
+task reloadSeedData(type: Exec) {
+    group = 'database'
+    description = 'Clear products table and reload seed data (DESTRUCTIVE!)'
+    
+    def dbName = 'store_db'
+    def containerName = 'store-postgres'  // Docker container name
+    def dataSqlFile = file('src/main/resources/data.sql')
+    
+    // Use docker exec to run psql inside the container
+    // data.sql already includes TRUNCATE statement at the beginning
+    commandLine 'docker', 'exec', '-i', containerName,
+        'psql', '-U', 'postgres', '-d', dbName, '-v', 'ON_ERROR_STOP=1'
+    
+    // Pipe the data.sql file content directly to stdin
+    standardInput = new FileInputStream(dataSqlFile)
+    
+    doFirst {
+        println "============================================================================"
+        println "⚠️  WARNING: This will DELETE all products in the store-backend database!"
+        println "============================================================================"
+        println "Container: ${containerName}"
+        println "Database: ${dbName}"
+        println "Table: products"
+        println "============================================================================"
+        println "Clearing and reloading seed data..."
+    }
+    
+    doLast {
+        println "============================================================================"
+        println "✅ Database cleared and seed data reloaded successfully!"
+        println "   Products loaded: 10 (IDs 1-10, aligned with warehouse)"
+        println "============================================================================"
+    }
+}
+
+// ============================================================================
+// Custom Task: Clear All Product Data
+// ============================================================================
+// Usage: ./gradlew :store-backend:clearSeedData
+// Description: Clears all products from the store-backend database
+// Warning: This will DELETE all products in the store-backend database!
+// ============================================================================
+task clearSeedData(type: Exec) {
+    group = 'database'
+    description = 'Clear all products from store-backend database (DESTRUCTIVE!)'
+    
+    def dbName = 'store_db'
+    def containerName = 'store-postgres'  // Docker container name
+    
+    // Create a temporary SQL script that clears all products
+    def tempSqlFile = file("${buildDir}/temp-clear.sql")
+    tempSqlFile.parentFile.mkdirs()
+    tempSqlFile.text = """
+-- Clear all products (CASCADE removes dependent data like order_items)
+TRUNCATE TABLE products CASCADE;
+"""
+    
+    // Use docker exec to run psql inside the container
+    commandLine 'docker', 'exec', '-i', containerName,
+        'psql', '-U', 'postgres', '-d', dbName, '-v', 'ON_ERROR_STOP=1'
+    
+    // Pipe the SQL file content to stdin
+    standardInput = new FileInputStream(tempSqlFile)
+    
+    doFirst {
+        println "============================================================================"
+        println "⚠️  WARNING: This will DELETE all products in the store-backend database!"
+        println "============================================================================"
+        println "Container: ${containerName}"
+        println "Database: ${dbName}"
+        println "Table: products"
+        println "============================================================================"
+        println "Clearing all product data..."
+    }
+    
+    doLast {
+        tempSqlFile.delete()
+        println "============================================================================"
+        println "✅ All product data cleared successfully!"
+        println "============================================================================"
+    }
+}

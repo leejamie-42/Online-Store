@@ -1,0 +1,75 @@
+/**
+ * LocalStorage Utility Functions
+ *
+ * Type-safe localStorage access with error handling
+ */
+export const storage = {
+  get: <T>(key: string): T | null => {
+    try {
+      const item = localStorage.getItem(key);
+      return item ? JSON.parse(item) : null;
+    } catch (error) {
+      console.error(`Error getting ${key} from localStorage:`, error);
+      return null;
+    }
+  },
+
+  set: <T>(key: string, value: T): void => {
+    try {
+      localStorage.setItem(key, JSON.stringify(value));
+    } catch (error) {
+      console.error(`Error setting ${key} to localStorage:`, error);
+      if (
+        error instanceof DOMException &&
+        error.name === "QuotaExceededError"
+      ) {
+        console.warn("localStorage quota exceeded");
+      }
+    }
+  },
+
+  remove: (key: string): void => {
+    try {
+      localStorage.removeItem(key);
+    } catch (error) {
+      console.error(`Error removing ${key} from localStorage:`, error);
+    }
+  },
+
+  clear: (): void => {
+    try {
+      localStorage.clear();
+    } catch (error) {
+      console.error("Error clearing localStorage:", error);
+    }
+  },
+};
+
+/**
+ * Token Storage Keys
+ */
+const TOKEN_KEYS = {
+  ACCESS_TOKEN: "accessToken",
+  REFRESH_TOKEN: "refreshToken",
+} as const;
+
+/**
+ * Token Storage Utilities
+ */
+export const tokenStorage = {
+  getToken: (): string | null => storage.get<string>(TOKEN_KEYS.ACCESS_TOKEN),
+  setToken: (token: string): void =>
+    storage.set(TOKEN_KEYS.ACCESS_TOKEN, token),
+  removeToken: (): void => storage.remove(TOKEN_KEYS.ACCESS_TOKEN),
+
+  getRefreshToken: (): string | null =>
+    storage.get<string>(TOKEN_KEYS.REFRESH_TOKEN),
+  setRefreshToken: (token: string): void =>
+    storage.set(TOKEN_KEYS.REFRESH_TOKEN, token),
+  removeRefreshToken: (): void => storage.remove(TOKEN_KEYS.REFRESH_TOKEN),
+
+  clearAll: (): void => {
+    tokenStorage.removeToken();
+    tokenStorage.removeRefreshToken();
+  },
+};

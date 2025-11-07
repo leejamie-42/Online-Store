@@ -1,0 +1,206 @@
+{
+  "info": {
+    "_postman_id": "order-api-collection-001",
+    "name": "Store Backend - Order API",
+    "description": "Authenticated endpoints for creating orders and retrieving order information for the logged-in user.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Create Order",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "// Save created order_id and verify response",
+              "pm.test(\"Status code is 201 Created\", function () {",
+              "  pm.response.to.have.status(201);",
+              "});",
+              "",
+              "var json = pm.response.json();",
+              "pm.test(\"Response has order_id, status, total\", function () {",
+              "  pm.expect(json).to.have.property('orderId');",
+              "  pm.expect(json).to.have.property('status');",
+              "  pm.expect(json).to.have.property('total');",
+              "});",
+              "",
+              "// Persist orderId for subsequent requests",
+              "pm.environment.set('orderId', json.orderId);"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json", "type": "text" },
+          { "key": "Accept", "value": "application/json", "type": "text" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"productId\": {{productId}},\n  \"quantity\": 1,\n  \"userId\": {{userId}},\n  \"shippingInfo\": {\n    \"firstName\": \"John\",\n    \"lastName\": \"Doe\",\n    \"email\": \"john@example.com\",\n    \"mobileNumber\": \"0400000000\",\n    \"addressLine1\": \"123 Main St\",\n    \"city\": \"Sydney\",\n    \"state\": \"NSW\",\n    \"postcode\": \"2000\",\n    \"country\": \"Australia\"\n  }\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/orders",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "orders"]
+        },
+        "description": "Create a new order for the authenticated user. Requires Bearer token.\n\nUses `{{productId}}` from Product API tests and `{{userId}}` from Authentication API tests."
+      },
+      "response": [
+        {
+          "name": "Created - Order Created",
+          "originalRequest": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/orders",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "orders"]
+            }
+          },
+          "status": "Created",
+          "code": 201,
+          "_postman_previewlanguage": "json",
+          "header": [
+            { "key": "Content-Type", "value": "application/json" }
+          ],
+          "body": "{\n  \"orderId\": 1,\n  \"status\": \"PENDING\",\n  \"total\": 199.98\n}"
+        }
+      ]
+    },
+    {
+      "name": "Get Order by ID",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status code is 200 OK\", function () {",
+              "  pm.response.to.have.status(200);",
+              "});",
+              "",
+              "var json = pm.response.json();",
+              "pm.test(\"Order has required fields\", function () {",
+              "  pm.expect(json).to.have.property('orderId');",
+              "  pm.expect(json).to.have.property('userId');",
+              "  pm.expect(json).to.have.property('productId');",
+              "  pm.expect(json).to.have.property('status');",
+              "  pm.expect(json).to.have.property('totalAmount');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "GET",
+        "header": [
+          { "key": "Accept", "value": "application/json", "type": "text" }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/orders/{{orderId}}",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "orders", "{{orderId}}"]
+        },
+        "description": "Retrieve full order details for the authenticated user by order ID."
+      },
+      "response": []
+    },
+    {
+      "name": "Get My Orders",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status code is 200 OK\", function () {",
+              "  pm.response.to.have.status(200);",
+              "});",
+              "",
+              "var arr = pm.response.json();",
+              "pm.test(\"Response is an array\", function () {",
+              "  pm.expect(arr).to.be.an('array');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "GET",
+        "header": [
+          { "key": "Accept", "value": "application/json", "type": "text" }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/orders",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "orders"]
+        },
+        "description": "Retrieve a list of orders for the authenticated user (most recent first)."
+      },
+      "response": []
+    }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{accessToken}}",
+        "type": "string"
+      }
+    ]
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": { "type": "text/javascript", "exec": [""] }
+    },
+    {
+      "listen": "test",
+      "script": { "type": "text/javascript", "exec": [""] }
+    }
+  ],
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:8081", "type": "string" },
+    { "key": "productId", "value": "1", "type": "string" },
+    { "key": "orderId", "value": "1", "type": "string" }
+  ]
+}
+
+

@@ -1,0 +1,380 @@
+{
+  "info": {
+    "_postman_id": "product-api-collection-001",
+    "name": "Store Backend - Product API",
+    "description": "Product catalog endpoints for browsing and retrieving product information. All endpoints are publicly accessible (no authentication required).",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Get All Products",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "// Verify response structure and save first product ID",
+              "if (pm.response.code === 200) {",
+              "    var jsonData = pm.response.json();",
+              "    ",
+              "    pm.test(\"Status code is 200 OK\", function () {",
+              "        pm.response.to.have.status(200);",
+              "    });",
+              "    ",
+              "    pm.test(\"Response is an array\", function () {",
+              "        pm.expect(jsonData).to.be.an('array');",
+              "    });",
+              "    ",
+              "    if (jsonData.length > 0) {",
+              "        // Save first product ID for subsequent tests",
+              "        pm.environment.set(\"productId\", jsonData[0].id);",
+              "        ",
+              "        pm.test(\"Products have required fields\", function () {",
+              "            var product = jsonData[0];",
+              "            pm.expect(product).to.have.property('id');",
+              "            pm.expect(product).to.have.property('name');",
+              "            pm.expect(product).to.have.property('price');",
+              "            pm.expect(product).to.have.property('stock');",
+              "            pm.expect(product).to.have.property('published');",
+              "        });",
+              "        ",
+              "        pm.test(\"Product data types are correct\", function () {",
+              "            var product = jsonData[0];",
+              "            pm.expect(product.id).to.be.a('number');",
+              "            pm.expect(product.name).to.be.a('string');",
+              "            pm.expect(product.price).to.be.a('number');",
+              "            pm.expect(product.stock).to.be.a('number');",
+              "            pm.expect(product.published).to.be.a('boolean');",
+              "        });",
+              "        ",
+              "        pm.test(\"Price and stock are valid numbers\", function () {",
+              "            var product = jsonData[0];",
+              "            pm.expect(product.price).to.be.above(0);",
+              "            pm.expect(product.stock).to.be.at.least(0);",
+              "        });",
+              "    }",
+              "}"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/products",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "products"]
+        },
+        "description": "Retrieve a list of all available products in the catalog.\n\n**Authentication:** Not required (public endpoint)\n\n**Response Fields:**\n- `id` (number): Unique product identifier\n- `name` (string): Product name\n- `description` (string): Detailed product description\n- `price` (number): Product price in USD\n- `imageUrl` (string): URL to product image\n- `stock` (number): Available quantity\n- `published` (boolean): Product visibility status (always true)\n\n**Use Cases:**\n- Display product listing page\n- Browse catalog without authentication\n- Get all products for search/filter functionality"
+      },
+      "response": [
+        {
+          "name": "Success - Products Retrieved",
+          "originalRequest": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/products",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "products"]
+            }
+          },
+          "status": "OK",
+          "code": 200,
+          "_postman_previewlanguage": "json",
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            }
+          ],
+          "body": "[\n    {\n        \"id\": 1,\n        \"name\": \"Wireless Mouse\",\n        \"description\": \"Ergonomic wireless mouse with 2.4GHz connectivity and rechargeable battery. Features adjustable DPI settings for precision control.\",\n        \"price\": 49.99,\n        \"imageUrl\": \"https://images.unsplash.com/photo-1527864550417-7fd91fc51a46?w=400\",\n        \"stock\": 25,\n        \"published\": true\n    },\n    {\n        \"id\": 2,\n        \"name\": \"Mechanical Keyboard\",\n        \"description\": \"RGB backlit mechanical keyboard with Cherry MX Blue switches. Full-size layout with dedicated media controls.\",\n        \"price\": 129.99,\n        \"imageUrl\": \"https://images.unsplash.com/photo-1511467687858-23d96c32e4ae?w=400\",\n        \"stock\": 15,\n        \"published\": true\n    },\n    {\n        \"id\": 3,\n        \"name\": \"27-inch Monitor\",\n        \"description\": \"4K UHD IPS monitor with HDR support and 60Hz refresh rate. Perfect for productivity and content creation.\",\n        \"price\": 399.99,\n        \"imageUrl\": \"https://images.unsplash.com/photo-1527443224154-c4a3942d3acf?w=400\",\n        \"stock\": 8,\n        \"published\": true\n    }\n]"
+        },
+        {
+          "name": "Success - Empty Catalog",
+          "originalRequest": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/products",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "products"]
+            }
+          },
+          "status": "OK",
+          "code": 200,
+          "_postman_previewlanguage": "json",
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            }
+          ],
+          "body": "[]"
+        }
+      ]
+    },
+    {
+      "name": "Get Product by ID",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "// Verify single product response structure",
+              "if (pm.response.code === 200) {",
+              "    var jsonData = pm.response.json();",
+              "    ",
+              "    pm.test(\"Status code is 200 OK\", function () {",
+              "        pm.response.to.have.status(200);",
+              "    });",
+              "    ",
+              "    pm.test(\"Response is an object\", function () {",
+              "        pm.expect(jsonData).to.be.an('object');",
+              "    });",
+              "    ",
+              "    pm.test(\"Product has all required fields\", function () {",
+              "        pm.expect(jsonData).to.have.property('id');",
+              "        pm.expect(jsonData).to.have.property('name');",
+              "        pm.expect(jsonData).to.have.property('description');",
+              "        pm.expect(jsonData).to.have.property('price');",
+              "        pm.expect(jsonData).to.have.property('imageUrl');",
+              "        pm.expect(jsonData).to.have.property('stock');",
+              "        pm.expect(jsonData).to.have.property('published');",
+              "    });",
+              "    ",
+              "    pm.test(\"Product ID matches request\", function () {",
+              "        var requestedId = pm.request.url.path[pm.request.url.path.length - 1];",
+              "        pm.expect(jsonData.id.toString()).to.eql(requestedId);",
+              "    });",
+              "    ",
+              "    pm.test(\"Product data is valid\", function () {",
+              "        pm.expect(jsonData.name).to.be.a('string').and.not.empty;",
+              "        pm.expect(jsonData.price).to.be.a('number').and.above(0);",
+              "        pm.expect(jsonData.stock).to.be.a('number').and.at.least(0);",
+              "        pm.expect(jsonData.published).to.be.true;",
+              "    });",
+              "}"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/products/{{productId}}",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "products", "{{productId}}"]
+        },
+        "description": "Retrieve detailed information about a specific product by its ID.\n\n**Authentication:** Not required (public endpoint)\n\n**Path Parameters:**\n- `id` (number, required): Product identifier\n\n**Response Fields:**\n- `id` (number): Product identifier\n- `name` (string): Product name\n- `description` (string): Full product description\n- `price` (number): Price in USD\n- `imageUrl` (string): Product image URL\n- `stock` (number): Available quantity\n- `published` (boolean): Visibility status\n\n**Use Cases:**\n- Product detail page\n- Check stock availability\n- Display product information before adding to cart"
+      },
+      "response": [
+        {
+          "name": "Success - Product Found",
+          "originalRequest": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/products/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "products", "1"]
+            }
+          },
+          "status": "OK",
+          "code": 200,
+          "_postman_previewlanguage": "json",
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            }
+          ],
+          "body": "{\n    \"id\": 1,\n    \"name\": \"Wireless Mouse\",\n    \"description\": \"Ergonomic wireless mouse with 2.4GHz connectivity and rechargeable battery. Features adjustable DPI settings for precision control.\",\n    \"price\": 49.99,\n    \"imageUrl\": \"https://images.unsplash.com/photo-1527864550417-7fd91fc51a46?w=400\",\n    \"stock\": 25,\n    \"published\": true\n}"
+        },
+        {
+          "name": "Error - Product Not Found",
+          "originalRequest": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/products/999",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "products", "999"]
+            }
+          },
+          "status": "Not Found",
+          "code": 404,
+          "_postman_previewlanguage": "json",
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            }
+          ],
+          "body": "{\n    \"error\": \"Not Found\",\n    \"message\": \"Product not found with id: 999\"\n}"
+        }
+      ]
+    },
+    {
+      "name": "Get Product by ID - Example 1 (Wireless Mouse)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status code is 200 OK\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test(\"Product name is Wireless Mouse\", function () {",
+              "    var jsonData = pm.response.json();",
+              "    pm.expect(jsonData.name).to.eql(\"Wireless Mouse\");",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/products/1",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "products", "1"]
+        },
+        "description": "Example request for product ID 1 (Wireless Mouse from seed data)."
+      },
+      "response": []
+    },
+    {
+      "name": "Get Product by ID - Example 2 (Mechanical Keyboard)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status code is 200 OK\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test(\"Product name is Mechanical Keyboard\", function () {",
+              "    var jsonData = pm.response.json();",
+              "    pm.expect(jsonData.name).to.eql(\"Mechanical Keyboard\");",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/products/2",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "products", "2"]
+        },
+        "description": "Example request for product ID 2 (Mechanical Keyboard from seed data)."
+      },
+      "response": []
+    },
+    {
+      "name": "Test 404 - Invalid Product ID",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status code is 404 Not Found\", function () {",
+              "    pm.response.to.have.status(404);",
+              "});",
+              "",
+              "pm.test(\"Error message is correct\", function () {",
+              "    var jsonData = pm.response.json();",
+              "    pm.expect(jsonData.error).to.eql(\"Not Found\");",
+              "    pm.expect(jsonData.message).to.include(\"Product not found\");",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/products/999",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "products", "999"]
+        },
+        "description": "Test case to verify proper 404 error handling for non-existent product ID."
+      },
+      "response": []
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [""]
+      }
+    },
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "exec": [""]
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8081",
+      "type": "string"
+    },
+    {
+      "key": "productId",
+      "value": "1",
+      "type": "string"
+    }
+  ]
+}

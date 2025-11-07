@@ -1,0 +1,7 @@
+rootProject.name = 'store-t6-g8'
+
+include 'store-backend'
+include 'warehouse'
+include 'bank'
+include 'delivery-co'
+include 'email-service'

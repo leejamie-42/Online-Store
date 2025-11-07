@@ -1,0 +1,71 @@
+spring:
+  datasource:
+    url: jdbc:h2:mem:testdb
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+
+  jpa:
+    hibernate:
+      ddl-auto: none
+    show-sql: true
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.H2Dialect
+        format_sql: true
+  h2:
+    console:
+      enabled: false
+
+  # Disable SQL initialization for tests (data.sql contains PostgreSQL-specific syntax)
+  sql:
+    init:
+      mode: never
+
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    baseline-on-migrate: true
+    baseline-version: 0
+    clean-disabled: false
+    placeholders:
+      jsonb_type: TEXT
+
+  # Redis test configuration - use embedded Redis
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      password: test
+      lettuce:
+        pool:
+          max-active: 5
+          max-idle: 2
+          min-idle: 1
+
+  # OpenAPI configuration for tests
+  springdoc:
+    swagger-ui:
+      enabled: false
+
+  openapi:
+    dev-url: http://localhost:8081
+
+jwt:
+  secret-key: dGVzdC1zZWNyZXQta2V5LWZvci1qd3QtdG9rZW4tZ2VuZXJhdGlvbi1taW5pbXVtLTI1Ni1iaXRzLWxvbmdlci1mb3ItdGVzdGluZw==
+  access-token-expiration: 900000
+  refresh-token-expiration: 86400000
+
+logging:
+  level:
+    root: WARN
+    com.comp5348.store: INFO
+
+bank:
+  service:
+    base-url: http://localhost:8083
+    account-id: 1
+
+deliveryco:
+  service:
+    base-url: http://localhost:8084

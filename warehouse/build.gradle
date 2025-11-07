@@ -1,0 +1,162 @@
+plugins {
+	id 'java'
+	id 'org.springframework.boot' version '3.5.6'
+	id 'io.spring.dependency-management' version '1.1.7'
+    id "com.google.protobuf" version "0.8.19"
+}
+
+group = 'com.comp5348'
+version = '0.0.1-SNAPSHOT'
+description = 'Warehouse backend Spring boot project'
+
+java {
+	toolchain {
+		languageVersion = JavaLanguageVersion.of(17)
+	}
+}
+
+configurations {
+	compileOnly {
+		extendsFrom annotationProcessor
+	}
+}
+
+repositories {
+	mavenCentral()
+}
+
+dependencies {
+    implementation 'org.springframework.boot:spring-boot-starter-actuator'
+    implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+    implementation 'org.springframework.boot:spring-boot-starter-web'
+    compileOnly 'org.projectlombok:lombok'
+    runtimeOnly 'org.postgresql:postgresql'
+    annotationProcessor 'org.projectlombok:lombok'
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+    testRuntimeOnly 'com.h2database:h2'
+    implementation 'io.grpc:grpc-netty-shaded:1.62.2'
+    implementation 'io.grpc:grpc-protobuf:1.62.2'
+    implementation 'io.grpc:grpc-stub:1.62.2'
+    implementation 'com.google.protobuf:protobuf-java:3.25.3'
+    implementation 'net.devh:grpc-server-spring-boot-starter:2.15.0.RELEASE'
+    implementation 'javax.annotation:javax.annotation-api:1.3.2'
+    implementation 'org.springframework.boot:spring-boot-starter-amqp'
+}
+
+
+tasks.named('test') {
+	useJUnitPlatform()
+}
+
+
+sourceSets {
+    main {
+        proto {
+            srcDir '../common/proto'
+        }
+    }
+}
+
+protobuf {
+    protoc { artifact = "com.google.protobuf:protoc:3.21.12" }
+    plugins {
+        grpc { artifact = 'io.grpc:protoc-gen-grpc-java:1.56.0' }
+    }
+    generateProtoTasks {
+        all().each { task ->
+            task.plugins { grpc {} }
+        }
+    }
+}
+
+// ============================================================================
+// Custom Task: Clear and Reload Seed Data
+// ============================================================================
+// Usage: ./gradlew :warehouse:reloadSeedData
+// Description: Clears existing data and reloads fresh seed data
+// Warning: This will DELETE all existing data in the warehouse database!
+// ============================================================================
+task reloadSeedData(type: Exec) {
+    group = 'database'
+    description = 'Clear database and reload seed data (DESTRUCTIVE!)'
+    
+    def dbName = 'warehouse'
+    def containerName = 'store-postgres'  // Docker container name
+    def dataSqlFile = file('src/main/resources/data.sql')
+    
+    // Use docker exec to run psql inside the container
+    // data.sql already includes TRUNCATE statements at the beginning
+    commandLine 'docker', 'exec', '-i', containerName,
+        'psql', '-U', 'postgres', '-d', dbName, '-v', 'ON_ERROR_STOP=1'
+    
+    // Pipe the data.sql file content directly to stdin
+    standardInput = new FileInputStream(dataSqlFile)
+    
+    doFirst {
+        println "============================================================================"
+        println "⚠️  WARNING: This will DELETE all data in the warehouse database!"
+        println "============================================================================"
+        println "Container: ${containerName}"
+        println "Database: ${dbName}"
+        println "============================================================================"
+        println "Clearing and reloading seed data..."
+    }
+    
+    doLast {
+        println "============================================================================"
+        println "✅ Database cleared and seed data reloaded successfully!"
+        println "============================================================================"
+    }
+}
+
+// ============================================================================
+// Custom Task: Clear All Data
+// ============================================================================
+// Usage: ./gradlew :warehouse:clearSeedData
+// Description: Clears all seed data from the warehouse database
+// Warning: This will DELETE all data in the warehouse database!
+// ============================================================================
+task clearSeedData(type: Exec) {
+    group = 'database'
+    description = 'Clear all seed data from warehouse database (DESTRUCTIVE!)'
+    
+    def dbName = 'warehouse'
+    def containerName = 'store-postgres'  // Docker container name
+    
+    // Create a temporary SQL script that clears all data
+    def tempSqlFile = file("${buildDir}/temp-clear.sql")
+    tempSqlFile.parentFile.mkdirs()
+    tempSqlFile.text = """
+-- Clear all data (in correct order to avoid FK constraints)
+TRUNCATE TABLE reservations CASCADE;
+TRUNCATE TABLE inventory_transaction_record CASCADE;
+TRUNCATE TABLE inventory CASCADE;
+TRUNCATE TABLE warehouse_product CASCADE;
+TRUNCATE TABLE warehouse CASCADE;
+"""
+    
+    // Use docker exec to run psql inside the container
+    commandLine 'docker', 'exec', '-i', containerName,
+        'psql', '-U', 'postgres', '-d', dbName, '-v', 'ON_ERROR_STOP=1'
+    
+    // Pipe the SQL file content to stdin
+    standardInput = new FileInputStream(tempSqlFile)
+    
+    doFirst {
+        println "============================================================================"
+        println "⚠️  WARNING: This will DELETE all data in the warehouse database!"
+        println "============================================================================"
+        println "Container: ${containerName}"
+        println "Database: ${dbName}"
+        println "============================================================================"
+        println "Clearing all data..."
+    }
+    
+    doLast {
+        tempSqlFile.delete()
+        println "============================================================================"
+        println "✅ All seed data cleared successfully!"
+        println "============================================================================"
+    }
+}

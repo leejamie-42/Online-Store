@@ -1,0 +1,6 @@
+# Main application configuration
+spring:
+  application:
+    name: bank
+  profiles:
+    active: local

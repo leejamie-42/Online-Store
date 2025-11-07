@@ -1,0 +1,13 @@
+# Main application configuration
+spring:
+  application:
+    name: warehouse
+  profiles:
+    active: local
+
+server:
+  port: 8082
+
+grpc:
+  server:
+    port: 9090

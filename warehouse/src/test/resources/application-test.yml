@@ -1,0 +1,47 @@
+spring:
+  datasource:
+    url: jdbc:h2:mem:testdb
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+
+  jpa:
+    hibernate:
+      ddl-auto: create-drop # Create schema from entities for testing
+    show-sql: true
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.H2Dialect
+        format_sql: true
+
+  h2:
+    console:
+      enabled: false
+
+  # Disable SQL initialization for tests (data.sql contains PostgreSQL-specific syntax)
+  sql:
+    init:
+      mode: never
+
+  flyway:
+    enabled: false # Disable Flyway for tests - use JPA ddl-auto instead
+
+  rabbitmq:
+    host: localhost
+    port: 5672
+    username: guest
+    password: guest
+
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.amqp.RabbitAutoConfiguration
+
+grpc:
+  server:
+    port: 0 # Use random port for tests to avoid conflicts
+
+logging:
+  level:
+    root: WARN
+    com.comp5348.warehouse: INFO
+    io.grpc: INFO
