@@ -1,8 +1,11 @@
 # Online Store - Group Project
 
-* NOTE: This code is for viewing purposes only. Do not copy, distribute, or use without permission! *
+**WARNING: This code is for viewing purposes only. Do not copy, distribute, or use without permission!**
+
 This repository contains the source code for a highly available and fault-tolerant online store application, as a group project for a school assessment. 
+
 Please note that I specifically worked on the warehouse and store-with-warehouse integration components, and I asked for my teammates' permission before uploading their code.
+
 The system is designed to handle complex order fulfillment workflows by integrating with external enterprise services.
 
 ---
